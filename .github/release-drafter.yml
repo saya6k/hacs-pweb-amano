@@ -4,8 +4,8 @@
 # suffix, so publishing rcs never consumes stable version numbers and the
 # two tracks' tags never collide. Keep version-resolver/categories in sync
 # with release-drafter-prerelease.yml.
-name-template: "pweb_amano-v$RESOLVED_VERSION"
-tag-template: "pweb_amano-v$RESOLVED_VERSION"
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
 version-resolver:
   minor:
     labels: ["enhancement", "feature"]
@@ -34,4 +34,4 @@ template: |
 
   $CHANGES
 
-  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...pweb_amano-v$RESOLVED_VERSION
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
