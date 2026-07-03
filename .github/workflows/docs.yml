@@ -1,8 +1,8 @@
 name: Docs
 
 # Build + deploy the bilingual Zensical site to Pages. Runs only when a GitHub
-# release is published — release-drafter maintains a single rolling draft, so
-# a maintainer's manual publish is what deploys the docs. Prereleases are
+# release is published — release-drafter maintains rolling stable/rc drafts,
+# so a maintainer's manual publish is what deploys the docs. Prereleases are
 # excluded (see the job-level `if`): the release event still fires for them,
 # but the docs site should only reflect a stable release. Checkout defaults to
 # the released tag. Also dispatchable for manual re-deploys.

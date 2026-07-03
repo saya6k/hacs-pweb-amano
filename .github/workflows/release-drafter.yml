@@ -25,8 +25,11 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Two rolling drafts, one per track (see .github/release-drafter*.yml):
+  # this job maintains the stable draft (and runs the autolabeler on PR
+  # events); draft-prerelease maintains the -rc.N draft.
   draft:
-    name: Draft release
+    name: Draft stable release
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.drafter.outputs.tag_name }}
@@ -36,8 +39,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  draft-prerelease:
+    name: Draft prerelease (rc)
+    # PR events are only for autolabeling, which the stable job already does.
+    if: github.event_name != 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter-prerelease.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   sync-manifest-version:
     name: Sync manifest.json version
+    # Follows the stable draft's version only. A published rc tag therefore
+    # contains a manifest without the -rc.N suffix (e.g. tag v0.1.2-rc.0,
+    # manifest 0.1.2) — acceptable: HACS tracks the installed version by tag,
+    # so only HA's integration-info page shows the unsuffixed version.
     needs: draft
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest

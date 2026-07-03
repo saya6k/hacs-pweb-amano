@@ -1,10 +1,11 @@
+# Stable track: drafts the next stable release, resolving the version from
+# the last stable (non-prerelease) release only. Prereleases are drafted by
+# the separate rc track (release-drafter-prerelease.yml) with an -rc.N
+# suffix, so publishing rcs never consumes stable version numbers and the
+# two tracks' tags never collide. Keep version-resolver/categories in sync
+# with release-drafter-prerelease.yml.
 name-template: "pweb_amano-v$RESOLVED_VERSION"
 tag-template: "pweb_amano-v$RESOLVED_VERSION"
-# Without this, release-drafter ignores published prereleases when finding
-# the "previous release" to diff against, so re-triggering after a
-# prerelease publish (e.g. the manifest-sync commit's push to main)
-# recomputes the same version and drafts a duplicate.
-include-pre-releases: true
 version-resolver:
   minor:
     labels: ["enhancement", "feature"]
