@@ -1,0 +1,24 @@
+name: CI
+
+# Entry point that orchestrates the separate workflow files as one check suite
+# (so every job shows on the commit). Release automation lives in its own
+# top-level release-drafter.yml — it is not called from here because it needs
+# an independent pull_request_target trigger that a workflow_call-only file
+# can't receive. Docs deploy is not here either: it runs from docs.yml on the
+# release-published event.
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml

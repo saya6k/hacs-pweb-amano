@@ -12,7 +12,15 @@ A HACS custom integration for **PWEB** (Amano Korea) apartment/officetel managem
 
 - **Login:** `POST {base_url}/login` with form fields `userId` (plaintext) and `userPwd` (**sha256 hex digest of the plaintext password** — the site's own login page hashes client-side before submitting, see `login.js`/`sha256-0.9.0.min.js`). Success is any 2xx response; failure is HTTP 500 with a JSON `errorMsg`, or HTTP 401 (personal-info agreement required — not handled).
 - **Session:** the login response sets a `JSESSIONID` cookie; every subsequent page fetch must reuse the same `aiohttp.ClientSession` (cookie jar) or the site treats you as logged out.
-- **Dashboard scraping is intentionally unimplemented.** Nobody has inspected an authenticated `/` (post-login landing) page yet — the field layout (주차/공지/관리비 등) is unknown. `api.py:async_fetch_dashboard` fetches and returns the raw page; extracting real fields into `coordinator.py`/`sensor.py` requires an authenticated user to share that HTML (view source while logged in, or the devcontainer against a real account) before more sensors can be added. Don't invent sensor fields without seeing the real markup.
+- **Dashboard scraping (post-login landing page `/`) is still unimplemented.** Nobody has inspected that page's layout — `api.py:async_fetch_dashboard` fetches and returns the raw page but nothing parses it. Don't invent fields for it without seeing the real markup.
+- **The discount (할인) screens *are* implemented**, based on real authenticated HTML from one account (오피스텔 unit, account_no `1408`, site `a17589.pweb.kr`). Endpoints used, all requiring the session cookie:
+  - `POST /state/doListMst` (startDate/endDate yyyyMMdd, `rowcount`) — discount registration history + a `summary` row (used_cnt/used_basic/used_charge/discount_price). Backs the registration-status sensor and the discount-history calendar. `account_no` is sent blank; the portal scopes this to the session's own account.
+  - `GET /pay/doViewDscnt` — server-renders the "잔여 할인" (remaining discount balance, KRW) straight into the HTML table; no AJAX call needed. Backs the balance sensor.
+  - `POST /discount/registration/listForDiscount` (`iLotArea`, `entryDate` yyyyMMdd, `carNo`) — finds a currently-parked vehicle's entry id (`id`, aka `peId`). `iLotArea` is derived from the host itself (`api.extract_ilot_area`): PWEB hostnames are `a<iLotArea>.pweb.kr`, e.g. `a17589.pweb.kr` → iLotArea `17589`.
+  - `GET /login` (unauthenticated) — renders the site/building name into `<title>` even when logged out (`api.async_fetch_site_name`). The config flow asks for the numeric iLotArea first, builds the host from it, and shows this name back to the user to confirm before asking for credentials.
+  - `POST /discount/registration/save` (`peId`, `carNo`, `discountType`, `memo`) — registers a discount; returns JSON `true`/`false`. Backs the `register_discount` service.
+  - Vehicle entry/exit: this account's menus (할인/계정관리/통계관리, fully enumerated) expose **no dedicated in/out log**. The only entry-time data available is bundled with discount registrations (`entry_date` + `paid_stat` in `/state/doListMst`), so the `event` platform only fires **exit** events (`paid_stat` flipping to `10`, diffed per-poll in `coordinator.py`) — there is no entry event.
+  - These endpoints are confirmed for one site/account only. Field names, `iLotArea` derivation, and menu availability may differ for other sites or account types (e.g. admin vs residential) — verify against real HTML before assuming they generalize.
 - **`robots.txt` on this host disallows crawling** (`Disallow: /`). That's aimed at search engines. This integration only ever fetches pages behind the user's own login, at a normal HA polling cadence (not a crawler) — keep it that way; don't add multi-page crawling or high-frequency polling.
 
 ## Repository layout
@@ -20,13 +28,17 @@ A HACS custom integration for **PWEB** (Amano Korea) apartment/officetel managem
 ```
 ha-pweb-amano/
 ├── custom_components/pweb_amano/
-│   ├── __init__.py        ← async_setup_entry/async_unload_entry, creates the coordinator
-│   ├── const.py            ← DOMAIN, CONF_* keys, default scan interval
-│   ├── api.py               ← PwebAmanoApiClient: login + raw page fetch (aiohttp)
-│   ├── exceptions.py       ← PwebAmanoAuthError / PwebAmanoConnectionError
-│   ├── coordinator.py       ← DataUpdateCoordinator, calls api.py
-│   ├── config_flow.py       ← single step: host, userId, userPwd
-│   ├── sensor.py            ← one placeholder sensor (login/last-sync status)
+│   ├── __init__.py        ← async_setup_entry/async_unload_entry, creates the coordinator, registers services
+│   ├── const.py            ← DOMAIN, CONF_* keys, default scan interval, service name
+│   ├── api.py               ← PwebAmanoApiClient: login, discount state/balance/registration (aiohttp)
+│   ├── exceptions.py       ← PwebAmanoAuthError / PwebAmanoConnectionError / PwebAmanoRegistrationError
+│   ├── coordinator.py       ← DataUpdateCoordinator, calls api.py, diffs paid_stat for exit events
+│   ├── config_flow.py       ← 3 steps: iLotArea → confirm site name → userId/userPwd
+│   ├── sensor.py            ← last-sync, discount-balance, registration-status sensors
+│   ├── calendar.py          ← discount-history calendar (on-demand date-range queries)
+│   ├── event.py             ← vehicle-exit event entity
+│   ├── services.py          ← register_discount action service
+│   ├── services.yaml        ← service field/selector definitions for the UI
 │   ├── manifest.json
 │   ├── strings.json         ← English source of truth for translations
 │   └── translations/en.json, ko.json

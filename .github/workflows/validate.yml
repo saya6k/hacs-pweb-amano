@@ -1,0 +1,29 @@
+name: Validate
+
+# Reusable: HACS + hassfest validation. Called by ci.yml.
+# yamllint disable-line rule:truthy
+on:
+  workflow_call:
+
+jobs:
+  hacs:
+    name: HACS
+    # HACS validates the integration as a release artifact — the structure
+    # (manifest.json, hacs.json, brand assets, etc.) doesn't change in feature
+    # PRs. Run only on main to avoid false failures when HACS can't resolve
+    # a feature-branch name as a version.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: HACS validation
+        uses: hacs/action@main
+        with:
+          category: integration
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: home-assistant/actions/hassfest@master

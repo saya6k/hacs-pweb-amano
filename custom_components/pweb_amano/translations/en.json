@@ -2,8 +2,18 @@
   "config": {
     "step": {
       "user": {
+        "description": "Enter the numeric lot-area code from your portal's address, e.g. 17589 for a17589.pweb.kr.",
         "data": {
-          "host": "Portal host (e.g. a17589.pweb.kr)",
+          "ilot_area": "Lot-area code (e.g. 17589)"
+        }
+      },
+      "confirm": {
+        "title": "Confirm parking lot",
+        "description": "Found: {site_name}. Continue if this is your building."
+      },
+      "credentials": {
+        "description": "Site: {site_name}",
+        "data": {
           "username": "ID",
           "password": "Password"
         }
@@ -21,6 +31,50 @@
     "sensor": {
       "last_sync": {
         "name": "Last sync"
+      },
+      "discount_balance": {
+        "name": "Discount balance"
+      },
+      "registration_status": {
+        "name": "Discount registration status"
+      }
+    },
+    "calendar": {
+      "discount_history": {
+        "name": "Discount history"
+      }
+    },
+    "event": {
+      "vehicle_exit": {
+        "name": "Vehicle exit"
+      }
+    }
+  },
+  "services": {
+    "register_discount": {
+      "name": "Register discount",
+      "description": "Registers a discount for a currently-parked vehicle.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The PWEB Amano device to act on."
+        },
+        "car_no": {
+          "name": "Car number",
+          "description": "The vehicle's license plate as shown in the portal."
+        },
+        "discount_type": {
+          "name": "Discount type",
+          "description": "The discount type ID shown on the portal's 할인등록 screen."
+        },
+        "memo": {
+          "name": "Memo",
+          "description": "Optional note to attach to the registration."
+        },
+        "entry_date": {
+          "name": "Entry date",
+          "description": "Date the vehicle entered, if not yesterday."
+        }
       }
     }
   }

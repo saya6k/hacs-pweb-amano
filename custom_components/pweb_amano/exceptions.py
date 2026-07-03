@@ -11,3 +11,7 @@ class PwebAmanoAuthError(PwebAmanoError):
 
 class PwebAmanoConnectionError(PwebAmanoError):
     """The portal could not be reached."""
+
+
+class PwebAmanoRegistrationError(PwebAmanoError):
+    """A discount registration request was rejected or the vehicle wasn't found."""

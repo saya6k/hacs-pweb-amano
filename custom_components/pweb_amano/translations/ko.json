@@ -2,8 +2,18 @@
   "config": {
     "step": {
       "user": {
+        "description": "포털 주소의 숫자 코드를 입력하세요. 예: a17589.pweb.kr → 17589",
         "data": {
-          "host": "포털 호스트 (예: a17589.pweb.kr)",
+          "ilot_area": "주차장 코드 (예: 17589)"
+        }
+      },
+      "confirm": {
+        "title": "주차장 확인",
+        "description": "확인된 주차장: {site_name}. 맞으면 계속 진행하세요."
+      },
+      "credentials": {
+        "description": "주차장: {site_name}",
+        "data": {
           "username": "아이디",
           "password": "비밀번호"
         }
@@ -21,6 +31,50 @@
     "sensor": {
       "last_sync": {
         "name": "마지막 동기화"
+      },
+      "discount_balance": {
+        "name": "할인권 잔액"
+      },
+      "registration_status": {
+        "name": "할인 등록현황"
+      }
+    },
+    "calendar": {
+      "discount_history": {
+        "name": "할인 내역"
+      }
+    },
+    "event": {
+      "vehicle_exit": {
+        "name": "차량 출차"
+      }
+    }
+  },
+  "services": {
+    "register_discount": {
+      "name": "할인등록",
+      "description": "현재 주차 중인 차량에 할인을 등록합니다.",
+      "fields": {
+        "device_id": {
+          "name": "장치",
+          "description": "대상 PWEB Amano 장치입니다."
+        },
+        "car_no": {
+          "name": "차량번호",
+          "description": "포털에 표시되는 차량번호입니다."
+        },
+        "discount_type": {
+          "name": "할인 유형",
+          "description": "포털의 할인등록 화면에 표시되는 할인 유형 ID입니다."
+        },
+        "memo": {
+          "name": "비고",
+          "description": "등록에 첨부할 메모(선택)입니다."
+        },
+        "entry_date": {
+          "name": "입차일",
+          "description": "전일이 아닌 경우 차량이 입차한 날짜입니다."
+        }
       }
     }
   }

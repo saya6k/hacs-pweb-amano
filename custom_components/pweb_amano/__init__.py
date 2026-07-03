@@ -7,8 +7,9 @@ from homeassistant.core import HomeAssistant
 
 from .api import PwebAmanoApiClient
 from .coordinator import PwebAmanoCoordinator
+from .services import async_register_services
 
-PLATFORMS = [Platform.SENSOR]
+PLATFORMS = [Platform.SENSOR, Platform.CALENDAR, Platform.EVENT]
 
 type PwebAmanoConfigEntry = ConfigEntry[PwebAmanoCoordinator]
 
@@ -23,6 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PwebAmanoConfigEntry) ->
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    async_register_services(hass)
     return True
 
 

@@ -1,12 +1,11 @@
-"""Sensor platform for PWEB Amano.
-
-Only a login/last-sync status sensor exists so far — the authenticated
-dashboard page hasn't been inspected yet, so no data fields have been mapped
-to entities. See AGENTS.md before adding more.
-"""
+"""Sensor platform for PWEB Amano."""
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -23,7 +22,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    async_add_entities([PwebAmanoLastSyncSensor(entry.runtime_data, entry.entry_id)])
+    coordinator = entry.runtime_data
+    async_add_entities(
+        [
+            PwebAmanoLastSyncSensor(coordinator, entry.entry_id),
+            PwebAmanoDiscountBalanceSensor(coordinator, entry.entry_id),
+            PwebAmanoRegistrationStatusSensor(coordinator, entry.entry_id),
+        ]
+    )
 
 
 class PwebAmanoLastSyncSensor(CoordinatorEntity[PwebAmanoCoordinator], SensorEntity):
@@ -45,3 +51,57 @@ class PwebAmanoLastSyncSensor(CoordinatorEntity[PwebAmanoCoordinator], SensorEnt
     @property
     def native_value(self):
         return self.coordinator.data.get("last_sync")
+
+
+class PwebAmanoDiscountBalanceSensor(CoordinatorEntity[PwebAmanoCoordinator], SensorEntity):
+    """Remaining prepaid-discount balance (할인권 잔액), in KRW."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "discount_balance"
+    _attr_native_unit_of_measurement = "원"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry_id}_discount_balance"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="PWEB Amano",
+            manufacturer="Amano Korea",
+        )
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("balance")
+
+
+class PwebAmanoRegistrationStatusSensor(
+    CoordinatorEntity[PwebAmanoCoordinator], SensorEntity
+):
+    """Today's discount-registration status (할인 등록현황)."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "registration_status"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: PwebAmanoCoordinator, entry_id: str) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry_id}_registration_status"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="PWEB Amano",
+            manufacturer="Amano Korea",
+        )
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("registration_summary", {}).get("used_cnt")
+
+    @property
+    def extra_state_attributes(self):
+        summary = self.coordinator.data.get("registration_summary", {})
+        return {
+            "free_registration_count": summary.get("used_basic"),
+            "paid_registration_count": summary.get("used_charge"),
+            "total_discount_amount": summary.get("discount_price"),
+        }

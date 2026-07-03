@@ -1,0 +1,25 @@
+register_discount:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: pweb_amano
+    car_no:
+      required: true
+      example: "12가3456"
+      selector:
+        text:
+    discount_type:
+      required: true
+      example: "1"
+      selector:
+        text:
+    memo:
+      required: false
+      selector:
+        text:
+    entry_date:
+      required: false
+      selector:
+        date:
