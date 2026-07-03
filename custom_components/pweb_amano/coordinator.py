@@ -5,6 +5,7 @@ import logging
 from datetime import date, timedelta
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
@@ -83,6 +84,21 @@ class PwebAmanoCoordinator(DataUpdateCoordinator[dict]):
     async def async_get_discount_events(
         self, start_date: str, end_date: str
     ) -> list[dict]:
-        """On-demand fetch for the discount-history calendar (start/end: yyyyMMdd)."""
-        state = await self.client.async_fetch_discount_state(start_date, end_date)
+        """On-demand fetch for the discount-history calendar (start/end: yyyyMMdd).
+
+        Unlike the normal poll, this can run whenever a dashboard renders a
+        month view — possibly long after the last poll's login, once the
+        portal's session has expired — so it must re-login itself rather than
+        relying on a cookie the regular poll happened to still have fresh.
+        """
+        try:
+            await self.client.async_login()
+            state = await self.client.async_fetch_discount_state(start_date, end_date)
+        except PwebAmanoError as err:
+            raise HomeAssistantError(str(err)) from err
+        if not isinstance(state, dict):
+            # The portal appears to respond with a bare JSON null/empty value
+            # (rather than {"data": []}) when a range has no registrations at
+            # all, e.g. the current month before any car has been discounted.
+            return []
         return state.get("data") or []
