@@ -2,7 +2,9 @@ name: Docs
 
 # Build + deploy the bilingual Zensical site to Pages. Runs only when a GitHub
 # release is published — release-drafter maintains a single rolling draft, so
-# a maintainer's manual publish is what deploys the docs. Checkout defaults to
+# a maintainer's manual publish is what deploys the docs. Prereleases are
+# excluded (see the job-level `if`): the release event still fires for them,
+# but the docs site should only reflect a stable release. Checkout defaults to
 # the released tag. Also dispatchable for manual re-deploys.
 # yamllint disable-line rule:truthy
 on:
@@ -13,6 +15,9 @@ on:
 jobs:
   docs:
     name: Build & deploy
+    # Skip prerelease publishes: `release: published` fires for those too,
+    # but the docs site should only reflect a maintainer's stable release.
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
