@@ -1,7 +1,7 @@
 {
-  "name": "ha-pweb-amano-dev",
+  "name": "hacs-pweb-amano-dev",
   "image": "mcr.microsoft.com/devcontainers/python:3-3.14-bookworm",
-  "runArgs": ["--hostname=ha-pweb-amano-dev"],
+  "runArgs": ["--hostname=hacs-pweb-amano-dev"],
   "postCreateCommand": "scripts/setup",
   "forwardPorts": [8123],
   "portsAttributes": {

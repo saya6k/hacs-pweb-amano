@@ -1,10 +1,10 @@
 [project]
 site_name = "PWEB Amano"
-site_url = "https://saya6k.github.io/ha-pweb-amano/en/"
+site_url = "https://saya6k.github.io/hacs-pweb-amano/en/"
 site_description = "Home Assistant integration for PWEB (Amano Korea) apartment/officetel management portals — no public API, so it logs in and parses HTML."
 docs_dir = "docs/en"
 site_dir = "site/en"
-repo_url = "https://github.com/saya6k/ha-pweb-amano"
+repo_url = "https://github.com/saya6k/hacs-pweb-amano"
 edit_uri = "edit/main/docs/en/"
 
 [project.theme]
@@ -12,10 +12,10 @@ language = "en"
 
 [[project.extra.alternate]]
 name = "English"
-link = "https://saya6k.github.io/ha-pweb-amano/en/"
+link = "https://saya6k.github.io/hacs-pweb-amano/en/"
 lang = "en"
 
 [[project.extra.alternate]]
 name = "한국어"
-link = "https://saya6k.github.io/ha-pweb-amano/ko/"
+link = "https://saya6k.github.io/hacs-pweb-amano/ko/"
 lang = "ko"

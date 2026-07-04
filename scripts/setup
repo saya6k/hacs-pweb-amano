@@ -78,8 +78,8 @@ homeassistant:
   elevation: 38
   unit_system: metric
   time_zone: Asia/Seoul
-  external_url: "http://ha-pweb-amano-dev:8123"
-  internal_url: "http://ha-pweb-amano-dev:8123"
+  external_url: "http://hacs-pweb-amano-dev:8123"
+  internal_url: "http://hacs-pweb-amano-dev:8123"
 
 default_config:
 

@@ -1,10 +1,10 @@
 [project]
 site_name = "PWEB Amano"
-site_url = "https://saya6k.github.io/ha-pweb-amano/ko/"
+site_url = "https://saya6k.github.io/hacs-pweb-amano/ko/"
 site_description = "PWEB(아마노코리아 관리사무소 시스템) 포털을 위한 Home Assistant 통합구성요소 — 공개 API가 없어 로그인 후 HTML을 파싱합니다."
 docs_dir = "docs/ko"
 site_dir = "site/ko"
-repo_url = "https://github.com/saya6k/ha-pweb-amano"
+repo_url = "https://github.com/saya6k/hacs-pweb-amano"
 edit_uri = "edit/main/docs/ko/"
 
 [project.theme]
@@ -12,10 +12,10 @@ language = "ko"
 
 [[project.extra.alternate]]
 name = "English"
-link = "https://saya6k.github.io/ha-pweb-amano/en/"
+link = "https://saya6k.github.io/hacs-pweb-amano/en/"
 lang = "en"
 
 [[project.extra.alternate]]
 name = "한국어"
-link = "https://saya6k.github.io/ha-pweb-amano/ko/"
+link = "https://saya6k.github.io/hacs-pweb-amano/ko/"
 lang = "ko"
