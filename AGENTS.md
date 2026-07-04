@@ -4,7 +4,7 @@
 
 Agent assets live under `.agents/` (the source of truth): `skills/`, `workflows/` (commands), `agents/`, and `memory/` (Claude's per-project memory). `.claude/` is a real directory: its `settings.json` is Claude-specific and tracked; its per-item symlinks into `.agents/` (`skills`, `commands` → `workflows`, `agents`) and `settings.local.json` are local-only, as is the `CLAUDE.md` → `AGENTS.md` symlink.
 
-This file briefs coding agents on the conventions and load-bearing facts of `ha-pweb-amano`. Read this before making changes.
+This file briefs coding agents on the conventions and load-bearing facts of `hacs-pweb-amano`. Read this before making changes.
 
 ## What this integration is
 
@@ -26,7 +26,7 @@ A HACS custom integration for **PWEB** (Amano Korea) apartment/officetel managem
 ## Repository layout
 
 ```
-ha-pweb-amano/
+hacs-pweb-amano/
 ├── custom_components/pweb_amano/
 │   ├── __init__.py        ← async_setup_entry/async_unload_entry, creates the coordinator, registers services
 │   ├── const.py            ← DOMAIN, CONF_* keys, default scan interval, service name

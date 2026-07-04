@@ -5,9 +5,9 @@
     "@saya6k"
   ],
   "config_flow": true,
-  "documentation": "https://saya6k.github.io/ha-pweb-amano/",
+  "documentation": "https://saya6k.github.io/hacs-pweb-amano/",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/saya6k/ha-pweb-amano/issues",
+  "issue_tracker": "https://github.com/saya6k/hacs-pweb-amano/issues",
   "requirements": [],
   "version": "0.0.0"
 }
