@@ -78,7 +78,7 @@
       "fields": {
         "device_id": {
           "name": "Device",
-          "description": "The parking management system (site) to register the discount with."
+          "description": "The parking management system (site) to register the discount with. Optional if only one site is configured - that one is used automatically."
         },
         "car_no": {
           "name": "Car number",
@@ -104,7 +104,7 @@
       "fields": {
         "device_id": {
           "name": "Device",
-          "description": "The parking management system (site) to search."
+          "description": "The parking management system (site) to search. Optional if only one site is configured - that one is used automatically."
         },
         "days": {
           "name": "Days",

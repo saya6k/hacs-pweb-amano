@@ -26,7 +26,7 @@ ATTR_DAYS = "days"
 
 SERVICE_REGISTER_DISCOUNT_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Optional(ATTR_DEVICE_ID): cv.string,
         vol.Required(ATTR_CAR_NO): cv.string,
         vol.Required(ATTR_DISCOUNT_TYPE): cv.string,
         vol.Optional(ATTR_MEMO, default=""): cv.string,
@@ -35,7 +35,7 @@ SERVICE_REGISTER_DISCOUNT_SCHEMA = vol.Schema(
 )
 SERVICE_LIST_UNREGISTERED_VEHICLES_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Optional(ATTR_DEVICE_ID): cv.string,
         vol.Optional(ATTR_DAYS, default=2): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=7)
         ),
@@ -43,8 +43,25 @@ SERVICE_LIST_UNREGISTERED_VEHICLES_SCHEMA = vol.Schema(
 )
 
 
-def _async_resolve_client(hass: HomeAssistant, device_id: str) -> PwebAmanoApiClient:
-    """Resolve a service call's device_id to that config entry's API client."""
+def _async_resolve_client(hass: HomeAssistant, device_id: str | None) -> PwebAmanoApiClient:
+    """Resolve a service call's device_id to that config entry's API client.
+
+    device_id is optional: with only one PWEB Amano site configured, that's
+    the only thing it could mean, so use it automatically rather than
+    forcing a pointless pick every call.
+    """
+    if device_id is None:
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            raise HomeAssistantError("no PWEB Amano site is configured")
+        if len(entries) > 1:
+            sites = ", ".join(entry.title for entry in entries)
+            raise HomeAssistantError(
+                f"more than one PWEB Amano site is configured ({sites}) - "
+                "specify device_id"
+            )
+        return entries[0].runtime_data.client
+
     device_registry = dr.async_get(hass)
     device = device_registry.async_get(device_id)
     if device is None:
@@ -79,7 +96,7 @@ def async_register_services(hass: HomeAssistant) -> None:
 
 def _async_register_discount(hass: HomeAssistant):
     async def _service(call: ServiceCall) -> None:
-        client = _async_resolve_client(hass, call.data[ATTR_DEVICE_ID])
+        client = _async_resolve_client(hass, call.data.get(ATTR_DEVICE_ID))
         car_no = call.data[ATTR_CAR_NO]
 
         # Visitor cars are the common case, and the caller usually doesn't
@@ -122,7 +139,7 @@ def _async_register_discount(hass: HomeAssistant):
 
 def _async_list_unregistered_vehicles(hass: HomeAssistant):
     async def _service(call: ServiceCall) -> ServiceResponse:
-        client = _async_resolve_client(hass, call.data[ATTR_DEVICE_ID])
+        client = _async_resolve_client(hass, call.data.get(ATTR_DEVICE_ID))
         today = date.today()
         entry_dates = [
             (today - timedelta(days=offset)).strftime("%Y%m%d")

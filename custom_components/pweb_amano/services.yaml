@@ -1,7 +1,7 @@
 register_discount:
   fields:
     device_id:
-      required: true
+      required: false
       selector:
         device:
           integration: pweb_amano
@@ -35,7 +35,7 @@ register_discount:
 list_unregistered_vehicles:
   fields:
     device_id:
-      required: true
+      required: false
       selector:
         device:
           integration: pweb_amano
