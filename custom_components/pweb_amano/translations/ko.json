@@ -86,7 +86,7 @@
         },
         "discount_type": {
           "name": "할인 유형",
-          "description": "할인 유형 ID입니다 - 할인 등록현황 센서의 \"available_discount_types\" 속성에서 이 사이트의 실제 옵션을 확인하세요 (단지마다 정책이 다릅니다)."
+          "description": "확인된 사이트에서 자주 쓰는 두 가지 중에서 고르거나, 다르면 직접 ID를 입력하세요 - 이 사이트의 전체 목록은 할인 등록현황 센서의 \"available_discount_types\" 속성에서 확인할 수 있습니다."
         },
         "memo": {
           "name": "비고",

@@ -16,7 +16,13 @@ register_discount:
       required: true
       example: "1"
       selector:
-        text:
+        select:
+          custom_value: true
+          options:
+            - value: "1"
+              label: "[무료] 1시간 할인"
+            - value: "6"
+              label: "[유료] 1시간 할인 (₩3,000)"
     memo:
       required: false
       selector:

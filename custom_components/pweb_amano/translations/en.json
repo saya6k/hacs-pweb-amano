@@ -86,7 +86,7 @@
         },
         "discount_type": {
           "name": "Discount type",
-          "description": "The discount type ID - see the registration-status sensor's \"available_discount_types\" attribute for this site's own options (policies differ per site)."
+          "description": "Pick from the confirmed site's two commonly-used types, or type a custom ID if yours differ - see the registration-status sensor's \"available_discount_types\" attribute for this site's full catalog."
         },
         "memo": {
           "name": "Memo",
