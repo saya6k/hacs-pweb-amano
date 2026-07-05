@@ -1,16 +1,18 @@
-"""Calendar platform for PWEB Amano — parking history (주차 내역).
+"""Calendar platform for PWEB Amano — per-vehicle parking history (주차 내역).
 
 HA calendars are queried on demand for arbitrary date ranges (e.g. when a
 dashboard renders a month view), so this doesn't ride along with the normal
 poll: async_get_events calls the coordinator directly, which still owns all
 network I/O per AGENTS.md.
 
-Only tracks the car plates configured via the options flow (Configure) -
-this account can register discounts for any car (its own, a visitor's, a
-family member's), so a discount-registration record alone doesn't mean "my
-car"; the tracked-plate list is what narrows it down. Events span the
-vehicle's actual parking duration (entry_date to dtOutDate), not just the
-discount registration's timestamp.
+One calendar entity (and device) per car plate configured via the options
+flow (Configure) - this account can register discounts for any car (its
+own, a visitor's, a family member's), so a discount-registration record
+alone doesn't mean "my car"; the tracked-plate list is what narrows it
+down, and each tracked car gets its own device rather than one shared
+calendar mixing every car together. Events span the vehicle's actual
+parking duration (entry_date to dtOutDate), not just the discount
+registration's timestamp.
 """
 from __future__ import annotations
 
@@ -18,7 +20,6 @@ from datetime import datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -34,9 +35,13 @@ async def async_setup_entry(
     entry: PwebAmanoConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the calendar platform."""
+    """Set up one calendar per tracked car plate."""
+    plates = entry.options.get(CONF_CAR_PLATES) or []
     async_add_entities(
-        [PwebAmanoParkingHistoryCalendar(entry.runtime_data, entry)]
+        [
+            PwebAmanoParkingHistoryCalendar(entry.runtime_data, entry, plate)
+            for plate in plates
+        ]
     )
 
 
@@ -78,20 +83,22 @@ def _row_to_event(row: dict) -> CalendarEvent:
 class PwebAmanoParkingHistoryCalendar(
     CoordinatorEntity[PwebAmanoCoordinator], CalendarEntity
 ):
-    """Parking history (입차~출차) of the configured car plates."""
+    """Parking history (입차~출차) of one tracked car plate."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "parking_history"
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
+    def __init__(
+        self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry, plate: str
+    ) -> None:
         super().__init__(coordinator)
-        self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_parking_history"
+        self._plate = plate
+        self._attr_unique_id = f"{entry.entry_id}_{plate}_parking_history"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
+            identifiers={(DOMAIN, f"{entry.entry_id}_{plate}")},
+            name=plate,
             manufacturer="Amano Korea",
-            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, entry.entry_id),
         )
 
     @property
@@ -101,12 +108,9 @@ class PwebAmanoParkingHistoryCalendar(
     async def async_get_events(
         self, hass: HomeAssistant, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
-        plates = self._entry.options.get(CONF_CAR_PLATES) or []
-        if not plates:
-            return []
         rows = await self.coordinator.async_get_discount_events(
             start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d")
         )
         return [
-            _row_to_event(row) for row in rows if row.get("carno") in plates
+            _row_to_event(row) for row in rows if row.get("carno") == self._plate
         ]
