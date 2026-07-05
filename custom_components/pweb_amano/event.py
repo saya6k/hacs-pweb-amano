@@ -1,20 +1,24 @@
-"""Event platform for PWEB Amano — vehicle entry/exit for tracked car plates.
+"""Event platform for PWEB Amano — per-vehicle entry/exit.
 
-Only tracks the car plates configured via the options flow (see
-calendar.py's docstring for why: this account can register discounts for
-any car, not just "its own"). "Entry" fires the first time we notice a
-registration for a tracked plate - not a live detection, since the portal
-has no dedicated in/out log and a discount is often registered well after
-the car actually parked (see coordinator.py). "Exit" fires when paid_stat
-flips to exited for a plate already being tracked, which is a genuine
-real-time signal for a car whose discount was registered while still
-parked. See AGENTS.md.
+One event entity (and device) per car plate configured via the options
+flow (see calendar.py's docstring for why: this account can register
+discounts for any car, not just "its own"). Splitting by plate, rather
+than one shared entity for every tracked car, matters here specifically
+because EventEntity state only ever reflects the *last* triggered event -
+sharing one entity across multiple cars would make it ambiguous which
+car's entry/exit you're looking at without digging into attributes.
+
+"Entry" fires the first time we notice a registration for a plate - not
+a live detection, since the portal has no dedicated in/out log and a
+discount is often registered well after the car actually parked (see
+coordinator.py). "Exit" fires when paid_stat flips to exited for a plate
+already being tracked, which is a genuine real-time signal for a car
+whose discount was registered while still parked. See AGENTS.md.
 """
 from __future__ import annotations
 
 from homeassistant.components.event import EventEntity
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -29,33 +33,38 @@ async def async_setup_entry(
     entry: PwebAmanoConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the event platform."""
+    """Set up one entry/exit event entity per tracked car plate."""
+    plates = entry.options.get(CONF_CAR_PLATES) or []
     async_add_entities(
-        [PwebAmanoVehicleParkingEvent(entry.runtime_data, entry)]
+        [
+            PwebAmanoVehicleParkingEvent(entry.runtime_data, entry, plate)
+            for plate in plates
+        ]
     )
 
 
 class PwebAmanoVehicleParkingEvent(CoordinatorEntity[PwebAmanoCoordinator], EventEntity):
-    """Fires "entry"/"exit" for the configured car plates."""
+    """Fires "entry"/"exit" for one tracked car plate."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "vehicle_parking"
     _attr_event_types = ["entry", "exit"]
 
-    def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
+    def __init__(
+        self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry, plate: str
+    ) -> None:
         super().__init__(coordinator)
-        self._entry = entry
-        self._attr_unique_id = f"{entry.entry_id}_vehicle_parking"
+        self._plate = plate
+        self._attr_unique_id = f"{entry.entry_id}_{plate}_vehicle_parking"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=entry.title,
+            identifiers={(DOMAIN, f"{entry.entry_id}_{plate}")},
+            name=plate,
             manufacturer="Amano Korea",
-            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, entry.entry_id),
         )
 
     def _tracked(self, rows: list[dict]) -> list[dict]:
-        plates = self._entry.options.get(CONF_CAR_PLATES) or []
-        return [row for row in rows if row.get("carno") in plates]
+        return [row for row in rows if row.get("carno") == self._plate]
 
     @callback
     def _handle_coordinator_update(self) -> None:
