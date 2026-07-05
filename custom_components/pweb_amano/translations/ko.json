@@ -97,6 +97,20 @@
           "description": "차량이 입차한 날짜입니다. 비워두면 전일과 당일을 모두 조회합니다."
         }
       }
+    },
+    "list_unregistered_vehicles": {
+      "name": "미등록 차량 조회",
+      "description": "아직 할인이 등록되지 않은, 현재 주차 중인 차량 목록을 조회합니다.",
+      "fields": {
+        "device_id": {
+          "name": "장치",
+          "description": "조회할 관리 시스템(단지)입니다."
+        },
+        "days": {
+          "name": "일수",
+          "description": "오늘을 포함해 며칠 전까지 조회할지입니다. 값이 클수록 오래 걸립니다."
+        }
+      }
     }
   }
 }

@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import logging
+import string
 from datetime import date, timedelta
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 
-from .const import DOMAIN, SERVICE_REGISTER_DISCOUNT
+from .api import PwebAmanoApiClient
+from .const import DOMAIN, SERVICE_LIST_UNREGISTERED_VEHICLES, SERVICE_REGISTER_DISCOUNT
 from .exceptions import PwebAmanoError
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ ATTR_CAR_NO = "car_no"
 ATTR_DISCOUNT_TYPE = "discount_type"
 ATTR_MEMO = "memo"
 ATTR_ENTRY_DATE = "entry_date"
+ATTR_DAYS = "days"
 
 SERVICE_REGISTER_DISCOUNT_SCHEMA = vol.Schema(
     {
@@ -30,27 +33,53 @@ SERVICE_REGISTER_DISCOUNT_SCHEMA = vol.Schema(
         vol.Optional(ATTR_ENTRY_DATE): cv.date,
     }
 )
+SERVICE_LIST_UNREGISTERED_VEHICLES_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_DEVICE_ID): cv.string,
+        vol.Optional(ATTR_DAYS, default=2): vol.All(
+            vol.Coerce(int), vol.Range(min=1, max=7)
+        ),
+    }
+)
+
+
+def _async_resolve_client(hass: HomeAssistant, device_id: str) -> PwebAmanoApiClient:
+    """Resolve a service call's device_id to that config entry's API client."""
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get(device_id)
+    if device is None:
+        raise HomeAssistantError(f"unknown device: {device_id}")
+
+    entry_id = next(iter(device.config_entries), None)
+    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    if entry is None or entry.domain != DOMAIN:
+        raise HomeAssistantError(f"device {device_id} is not a PWEB Amano device")
+
+    return entry.runtime_data.client
 
 
 def async_register_services(hass: HomeAssistant) -> None:
     """Register the domain's services once, regardless of entry count."""
-    if hass.services.has_service(DOMAIN, SERVICE_REGISTER_DISCOUNT):
-        return
+    if not hass.services.has_service(DOMAIN, SERVICE_REGISTER_DISCOUNT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_REGISTER_DISCOUNT,
+            _async_register_discount(hass),
+            schema=SERVICE_REGISTER_DISCOUNT_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_LIST_UNREGISTERED_VEHICLES):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_LIST_UNREGISTERED_VEHICLES,
+            _async_list_unregistered_vehicles(hass),
+            schema=SERVICE_LIST_UNREGISTERED_VEHICLES_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
 
-    async def _async_register_discount(call: ServiceCall) -> None:
-        device_registry = dr.async_get(hass)
-        device = device_registry.async_get(call.data[ATTR_DEVICE_ID])
-        if device is None:
-            raise HomeAssistantError(f"unknown device: {call.data[ATTR_DEVICE_ID]}")
 
-        entry_id = next(iter(device.config_entries), None)
-        entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
-        if entry is None or entry.domain != DOMAIN:
-            raise HomeAssistantError(
-                f"device {call.data[ATTR_DEVICE_ID]} is not a PWEB Amano device"
-            )
-
-        client = entry.runtime_data.client
+def _async_register_discount(hass: HomeAssistant):
+    async def _service(call: ServiceCall) -> None:
+        client = _async_resolve_client(hass, call.data[ATTR_DEVICE_ID])
         car_no = call.data[ATTR_CAR_NO]
 
         # Visitor cars are the common case, and the caller usually doesn't
@@ -88,9 +117,41 @@ def async_register_services(hass: HomeAssistant) -> None:
         except PwebAmanoError as err:
             raise HomeAssistantError(str(err)) from err
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_REGISTER_DISCOUNT,
-        _async_register_discount,
-        schema=SERVICE_REGISTER_DISCOUNT_SCHEMA,
-    )
+    return _service
+
+
+def _async_list_unregistered_vehicles(hass: HomeAssistant):
+    async def _service(call: ServiceCall) -> ServiceResponse:
+        client = _async_resolve_client(hass, call.data[ATTR_DEVICE_ID])
+        today = date.today()
+        entry_dates = [
+            (today - timedelta(days=offset)).strftime("%Y%m%d")
+            for offset in range(call.data[ATTR_DAYS])
+        ]
+
+        try:
+            # There's no "list every parked car" endpoint (see AGENTS.md) -
+            # the search only works by car number, so cast the widest
+            # possible net: every plate has at least one of these ten
+            # digits somewhere, so searching all of them finds every car.
+            await client.async_login()
+            found: dict[int, dict] = {}
+            for entry_date in entry_dates:
+                for digit in string.digits:
+                    for row in await client.async_find_parked_entry(digit, entry_date):
+                        found[row["id"]] = row
+        except PwebAmanoError as err:
+            raise HomeAssistantError(str(err)) from err
+
+        vehicles = [
+            {
+                "car_no": row.get("carNo"),
+                "entry_date": row.get("entryDateToString"),
+                "minutes_parked": row.get("incar_min"),
+            }
+            for row in found.values()
+            if str(row.get("dscnt_cnt")) == "0"
+        ]
+        return {"vehicles": vehicles}
+
+    return _service
