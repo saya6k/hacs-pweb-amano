@@ -27,6 +27,16 @@
       "already_configured": "이미 등록된 계정입니다"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "description": "특정 차량의 주차 내역(입차~출차)을 추적합니다. 이 계정은 어떤 차량이든 할인 등록이 가능하므로, 여기 등록한 차량만 캘린더에 표시됩니다.",
+        "data": {
+          "car_plates": "추적할 차량 번호"
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "last_sync": {
@@ -40,13 +50,13 @@
       }
     },
     "calendar": {
-      "discount_history": {
-        "name": "할인 내역"
+      "parking_history": {
+        "name": "주차 내역"
       }
     },
     "event": {
-      "vehicle_exit": {
-        "name": "차량 출차"
+      "vehicle_parking": {
+        "name": "차량 입출차"
       }
     },
     "button": {
@@ -70,7 +80,7 @@
         },
         "discount_type": {
           "name": "할인 유형",
-          "description": "포털의 할인등록 화면에 표시되는 할인 유형 ID입니다."
+          "description": "할인 유형 ID입니다 - 할인 등록현황 센서의 \"available_discount_types\" 속성에서 이 사이트의 실제 옵션을 확인하세요 (단지마다 정책이 다릅니다)."
         },
         "memo": {
           "name": "비고",

@@ -228,6 +228,22 @@ class PwebAmanoApiClient:
         except aiohttp.ClientError as err:
             raise PwebAmanoConnectionError(str(err)) from err
 
+    async def async_fetch_discount_types(self) -> list[dict]:
+        """Fetch this site's admin-configured discount-type catalog.
+
+        POSTs /setup/dscntTypeSetting/doListMst (no params beyond the session
+        cookie needed). This is site-wide config, not scoped to the calling
+        account, and may include types the account never actually uses (e.g.
+        office-only types) - the caller decides which ones are relevant.
+        """
+        url = f"{self._base_url}/setup/dscntTypeSetting/doListMst"
+        try:
+            async with self._session.post(url, data={}) as response:
+                response.raise_for_status()
+                return await response.json(content_type=None)
+        except aiohttp.ClientError as err:
+            raise PwebAmanoConnectionError(str(err)) from err
+
     async def async_find_parked_entry(self, car_no: str, entry_date: str) -> list[dict]:
         """Look up currently-parked entries for car_no on entry_date (yyyyMMdd).
 

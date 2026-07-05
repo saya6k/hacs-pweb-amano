@@ -108,4 +108,5 @@ class PwebAmanoRegistrationStatusSensor(
             "free_registration_count": summary.get("used_basic"),
             "paid_registration_count": summary.get("used_charge"),
             "total_discount_amount": summary.get("discount_price"),
+            "available_discount_types": self.coordinator.data.get("discount_types", {}),
         }

@@ -27,6 +27,16 @@
       "already_configured": "This account is already configured"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Track specific vehicles' parking history (입차~출차). This account can register discounts for any car, so this list is what narrows the calendar down to the ones you actually care about.",
+        "data": {
+          "car_plates": "Car plates to track"
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "last_sync": {
@@ -40,13 +50,13 @@
       }
     },
     "calendar": {
-      "discount_history": {
-        "name": "Discount history"
+      "parking_history": {
+        "name": "Parking history"
       }
     },
     "event": {
-      "vehicle_exit": {
-        "name": "Vehicle exit"
+      "vehicle_parking": {
+        "name": "Vehicle entry/exit"
       }
     },
     "button": {
@@ -70,7 +80,7 @@
         },
         "discount_type": {
           "name": "Discount type",
-          "description": "The discount type ID shown on the portal's 할인등록 screen."
+          "description": "The discount type ID - see the registration-status sensor's \"available_discount_types\" attribute for this site's own options (policies differ per site)."
         },
         "memo": {
           "name": "Memo",

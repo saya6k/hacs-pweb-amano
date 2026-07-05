@@ -4,6 +4,10 @@ Three steps: (1) the numeric iLotArea from the portal's hostname, which we
 use to fetch and show the site name off the unauthenticated /login page so
 the user can confirm they've got the right building, then (2) that
 confirmation, then (3) ID/password.
+
+The options flow (post-setup, via Configure) manages the separate list of
+car plates the parking-history calendar tracks - editable any time, unlike
+the one-shot setup flow above.
 """
 from __future__ import annotations
 
@@ -15,9 +19,10 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers import selector
 
 from .api import PwebAmanoApiClient, async_fetch_site_name, normalize_base_url
-from .const import DOMAIN
+from .const import CONF_CAR_PLATES, DOMAIN
 from .exceptions import PwebAmanoAuthError, PwebAmanoConnectionError
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,12 +36,27 @@ STEP_CREDENTIALS_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PASSWORD): str,
     }
 )
+STEP_OPTIONS_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_CAR_PLATES): selector.TextSelector(
+            selector.TextSelectorConfig(multiple=True)
+        ),
+    }
+)
 
 
 class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for PWEB Amano."""
 
     VERSION = 1
+
+    @staticmethod
+    @config_entries.callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> PwebAmanoOptionsFlow:
+        """Get the options flow for this handler."""
+        return PwebAmanoOptionsFlow()
 
     def __init__(self) -> None:
         self._host: str | None = None
@@ -116,4 +136,22 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_CREDENTIALS_DATA_SCHEMA,
             errors=errors,
             description_placeholders={"site_name": self._site_name},
+        )
+
+
+class PwebAmanoOptionsFlow(config_entries.OptionsFlow):
+    """Manage the car plates the parking-history calendar tracks."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Single step: edit the tracked car-plate list."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                STEP_OPTIONS_DATA_SCHEMA, self.config_entry.options
+            ),
         )
