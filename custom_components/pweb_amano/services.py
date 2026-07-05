@@ -51,17 +51,33 @@ def async_register_services(hass: HomeAssistant) -> None:
             )
 
         client = entry.runtime_data.client
-
-        entry_date = call.data.get(ATTR_ENTRY_DATE) or date.today() - timedelta(days=1)
-        entry_date_str = entry_date.strftime("%Y%m%d")
         car_no = call.data[ATTR_CAR_NO]
 
+        # Visitor cars are the common case, and the caller usually doesn't
+        # know (or care) whether the portal logged the entry as yesterday or
+        # today (e.g. an overnight visitor) - the portal has no ranged
+        # search, so search both days and take the first match, unless the
+        # caller pinned an explicit entry_date.
+        if call.data.get(ATTR_ENTRY_DATE):
+            candidate_dates = [call.data[ATTR_ENTRY_DATE]]
+        else:
+            today = date.today()
+            candidate_dates = [today - timedelta(days=1), today]
+
         try:
-            parked = await client.async_find_parked_entry(car_no, entry_date_str)
+            parked = []
+            for candidate_date in candidate_dates:
+                parked = await client.async_find_parked_entry(
+                    car_no, candidate_date.strftime("%Y%m%d")
+                )
+                if parked:
+                    break
+
             if not parked:
+                searched = ", ".join(d.strftime("%Y%m%d") for d in candidate_dates)
                 raise HomeAssistantError(
                     f"차량 '{car_no}'을(를) 주차장에서 찾을 수 없습니다 "
-                    f"(entry_date={entry_date_str})"
+                    f"(entry_date={searched})"
                 )
             await client.async_register_discount(
                 pe_id=parked[0]["id"],
