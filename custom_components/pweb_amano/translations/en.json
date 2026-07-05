@@ -17,6 +17,12 @@
           "username": "ID",
           "password": "Password"
         }
+      },
+      "car_plates": {
+        "description": "Optional: track specific vehicles' parking history (입차~출차) and entry/exit events right away. This account can register discounts for any car, so this list is what narrows things down to the ones you actually care about. Leave blank to skip - addable/editable any time later via Configure.",
+        "data": {
+          "car_plates": "Car plates to track"
+        }
       }
     },
     "error": {

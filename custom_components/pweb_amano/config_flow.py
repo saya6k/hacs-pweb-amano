@@ -1,13 +1,11 @@
 """Config flow for PWEB Amano.
 
-Three steps: (1) the numeric iLotArea from the portal's hostname, which we
+Four steps: (1) the numeric iLotArea from the portal's hostname, which we
 use to fetch and show the site name off the unauthenticated /login page so
 the user can confirm they've got the right building, then (2) that
-confirmation, then (3) ID/password.
-
-The options flow (post-setup, via Configure) manages the separate list of
-car plates the parking-history calendar tracks - editable any time, unlike
-the one-shot setup flow above.
+confirmation, then (3) ID/password, then (4) optionally the car plates to
+track (same field the options flow below manages - skippable here and
+addable/editable any time after via Configure).
 """
 from __future__ import annotations
 
@@ -45,6 +43,17 @@ STEP_OPTIONS_DATA_SCHEMA = vol.Schema(
 )
 
 
+def _clean_car_plates(user_input: dict[str, Any]) -> dict[str, Any]:
+    """Strip/drop blank entries - the multi-text selector can submit empty rows.
+
+    An empty-string plate would otherwise get its own (unnamed) device, since
+    calendar.py/event.py create one device per entry in this list.
+    """
+    plates = user_input.get(CONF_CAR_PLATES) or []
+    cleaned = [plate.strip() for plate in plates if plate.strip()]
+    return {**user_input, CONF_CAR_PLATES: cleaned}
+
+
 class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for PWEB Amano."""
 
@@ -61,6 +70,7 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._host: str | None = None
         self._site_name: str | None = None
+        self._data: dict[str, Any] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -120,14 +130,12 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.warning("Could not reach %s: %s", self._host, err)
                 errors["base"] = "cannot_connect"
             else:
-                return self.async_create_entry(
-                    title=self._site_name or self._host,
-                    data={
-                        CONF_HOST: self._host,
-                        CONF_USERNAME: user_input[CONF_USERNAME],
-                        CONF_PASSWORD: user_input[CONF_PASSWORD],
-                    },
-                )
+                self._data = {
+                    CONF_HOST: self._host,
+                    CONF_USERNAME: user_input[CONF_USERNAME],
+                    CONF_PASSWORD: user_input[CONF_PASSWORD],
+                }
+                return await self.async_step_car_plates()
             finally:
                 await client.async_close()
 
@@ -136,6 +144,21 @@ class PwebAmanoConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_CREDENTIALS_DATA_SCHEMA,
             errors=errors,
             description_placeholders={"site_name": self._site_name},
+        )
+
+    async def async_step_car_plates(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step 4: optionally list the car plates to track (skippable)."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self._site_name or self._host,
+                data=self._data,
+                options=_clean_car_plates(user_input),
+            )
+
+        return self.async_show_form(
+            step_id="car_plates", data_schema=STEP_OPTIONS_DATA_SCHEMA
         )
 
 
@@ -147,7 +170,7 @@ class PwebAmanoOptionsFlow(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Single step: edit the tracked car-plate list."""
         if user_input is not None:
-            return self.async_create_entry(data=user_input)
+            return self.async_create_entry(data=_clean_car_plates(user_input))
 
         return self.async_show_form(
             step_id="init",

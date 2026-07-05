@@ -34,7 +34,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up one entry/exit event entity per tracked car plate."""
-    plates = entry.options.get(CONF_CAR_PLATES) or []
+    # Filter blanks defensively even though the config/options flow now
+    # strips them before saving - existing entries may already have one
+    # saved from before that fix, and a blank plate would get its own
+    # (unnamed) device otherwise.
+    plates = [p for p in (entry.options.get(CONF_CAR_PLATES) or []) if p]
     async_add_entities(
         [
             PwebAmanoVehicleParkingEvent(entry.runtime_data, entry, plate)
