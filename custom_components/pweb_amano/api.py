@@ -77,7 +77,7 @@ _SSL_CONTEXT = _build_ssl_context()
 
 
 def normalize_base_url(host: str) -> str:
-    """Turn a bare host ("a17589.pweb.kr") or full URL into a base URL."""
+    """Turn a bare host ("a12345.pweb.kr") or full URL into a base URL."""
     host = host.strip().rstrip("/")
     if not host.startswith(("http://", "https://")):
         host = f"https://{host}"
@@ -85,7 +85,7 @@ def normalize_base_url(host: str) -> str:
 
 
 def extract_ilot_area(host: str) -> str | None:
-    """Pull the numeric parking-lot-area code out of a host like a17589.pweb.kr.
+    """Pull the numeric parking-lot-area code out of a host like a12345.pweb.kr.
 
     PWEB assigns each site's portal a hostname of the form a<iLotArea>.pweb.kr,
     so the code the discount-registration endpoints need is already right
@@ -201,8 +201,11 @@ class PwebAmanoApiClient:
         """Fetch discount registrations between start_date and end_date (yyyyMMdd).
 
         POSTs the same /state/doListMst endpoint the "할인등록현황" screen uses.
-        account_no is left blank: the portal already scopes this endpoint to
-        the logged-in account's own records.
+        account_no must be sent as the logged-in user's own id - the portal
+        does NOT scope this endpoint by session when account_no is left
+        blank, it returns every account's registrations building-wide (a
+        visitor-car registration still carries the registering resident's
+        account_no, so this still includes those).
         """
         url = f"{self._base_url}/state/doListMst"
         try:
@@ -211,7 +214,7 @@ class PwebAmanoApiClient:
                 data={
                     "startDate": start_date,
                     "endDate": end_date,
-                    "account_no": "",
+                    "account_no": self._user_id,
                     "dc_id": "",
                     "carno": "",
                     "corp": "",
