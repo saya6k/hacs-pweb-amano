@@ -1,9 +1,16 @@
-"""Calendar platform for PWEB Amano — discount history (할인 내역).
+"""Calendar platform for PWEB Amano — parking history (주차 내역).
 
 HA calendars are queried on demand for arbitrary date ranges (e.g. when a
 dashboard renders a month view), so this doesn't ride along with the normal
 poll: async_get_events calls the coordinator directly, which still owns all
 network I/O per AGENTS.md.
+
+Only tracks the car plates configured via the options flow (Configure) -
+this account can register discounts for any car (its own, a visitor's, a
+family member's), so a discount-registration record alone doesn't mean "my
+car"; the tracked-plate list is what narrows it down. Events span the
+vehicle's actual parking duration (entry_date to dtOutDate), not just the
+discount registration's timestamp.
 """
 from __future__ import annotations
 
@@ -18,7 +25,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from . import PwebAmanoConfigEntry
-from .const import DOMAIN
+from .const import CONF_CAR_PLATES, DOMAIN
 from .coordinator import PwebAmanoCoordinator
 
 
@@ -29,11 +36,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up the calendar platform."""
     async_add_entities(
-        [PwebAmanoDiscountHistoryCalendar(entry.runtime_data, entry)]
+        [PwebAmanoParkingHistoryCalendar(entry.runtime_data, entry)]
     )
 
 
-def _parse_amano_datetime(value: str | None) -> datetime:
+def _parse_amano_datetime(value: str | None) -> datetime | None:
     """Parse a yyyyMMddHHmmss (or bare yyyyMMdd) timestamp from the portal.
 
     The portal has no timezone concept of its own - these are wall-clock
@@ -43,6 +50,8 @@ def _parse_amano_datetime(value: str | None) -> datetime:
     HA's local tzinfo attached as-is, with no numeric shift.
     """
     value = (value or "").strip()
+    if not value:
+        return None
     if len(value) >= 14:
         parsed = datetime.strptime(value[:14], "%Y%m%d%H%M%S")
     else:
@@ -51,27 +60,33 @@ def _parse_amano_datetime(value: str | None) -> datetime:
 
 
 def _row_to_event(row: dict) -> CalendarEvent:
-    start = _parse_amano_datetime(row.get("reg_date") or row.get("entry_date"))
+    start = _parse_amano_datetime(row.get("entry_date"))
+    end = _parse_amano_datetime(row.get("dtOutDate"))
+    if start is None:
+        start = _parse_amano_datetime(row.get("reg_date"))
+    if end is None or end <= start:
+        end = start + timedelta(minutes=1)
     memo = row.get("memo") or "-"
     return CalendarEvent(
         start=start,
-        end=start + timedelta(minutes=1),
+        end=end,
         summary=f"{row.get('carno', '')} {row.get('discount_name', '')}".strip(),
-        description=f"입차: {row.get('entry_date', '')} / 비고: {memo}",
+        description=f"할인 등록: {row.get('reg_date', '')} / 비고: {memo}",
     )
 
 
-class PwebAmanoDiscountHistoryCalendar(
+class PwebAmanoParkingHistoryCalendar(
     CoordinatorEntity[PwebAmanoCoordinator], CalendarEntity
 ):
-    """History log of registered discounts — there is no "upcoming" event."""
+    """Parking history (입차~출차) of the configured car plates."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "discount_history"
+    _attr_translation_key = "parking_history"
 
     def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_discount_history"
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_parking_history"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
@@ -86,7 +101,12 @@ class PwebAmanoDiscountHistoryCalendar(
     async def async_get_events(
         self, hass: HomeAssistant, start_date: datetime, end_date: datetime
     ) -> list[CalendarEvent]:
+        plates = self._entry.options.get(CONF_CAR_PLATES) or []
+        if not plates:
+            return []
         rows = await self.coordinator.async_get_discount_events(
             start_date.strftime("%Y%m%d"), end_date.strftime("%Y%m%d")
         )
-        return [_row_to_event(row) for row in rows]
+        return [
+            _row_to_event(row) for row in rows if row.get("carno") in plates
+        ]

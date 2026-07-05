@@ -1,9 +1,14 @@
-"""Event platform for PWEB Amano — vehicle exit events.
+"""Event platform for PWEB Amano — vehicle entry/exit for tracked car plates.
 
-Only exit ("출차") events are exposed. The portal has no entry-side ("입차")
-log reachable by this account's menus — the only entry-time data we can see
-comes bundled with discount registrations, so an "entry" event here would
-silently miss any car that never registered a discount. See AGENTS.md.
+Only tracks the car plates configured via the options flow (see
+calendar.py's docstring for why: this account can register discounts for
+any car, not just "its own"). "Entry" fires the first time we notice a
+registration for a tracked plate - not a live detection, since the portal
+has no dedicated in/out log and a discount is often registered well after
+the car actually parked (see coordinator.py). "Exit" fires when paid_stat
+flips to exited for a plate already being tracked, which is a genuine
+real-time signal for a car whose discount was registered while still
+parked. See AGENTS.md.
 """
 from __future__ import annotations
 
@@ -15,7 +20,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PwebAmanoConfigEntry
-from .const import DOMAIN
+from .const import CONF_CAR_PLATES, DOMAIN
 from .coordinator import PwebAmanoCoordinator
 
 
@@ -26,20 +31,21 @@ async def async_setup_entry(
 ) -> None:
     """Set up the event platform."""
     async_add_entities(
-        [PwebAmanoVehicleExitEvent(entry.runtime_data, entry)]
+        [PwebAmanoVehicleParkingEvent(entry.runtime_data, entry)]
     )
 
 
-class PwebAmanoVehicleExitEvent(CoordinatorEntity[PwebAmanoCoordinator], EventEntity):
-    """Fires when a discount-registered vehicle's paid_stat flips to exited."""
+class PwebAmanoVehicleParkingEvent(CoordinatorEntity[PwebAmanoCoordinator], EventEntity):
+    """Fires "entry"/"exit" for the configured car plates."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "vehicle_exit"
-    _attr_event_types = ["exit"]
+    _attr_translation_key = "vehicle_parking"
+    _attr_event_types = ["entry", "exit"]
 
     def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_vehicle_exit"
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_vehicle_parking"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
@@ -47,16 +53,27 @@ class PwebAmanoVehicleExitEvent(CoordinatorEntity[PwebAmanoCoordinator], EventEn
             entry_type=DeviceEntryType.SERVICE,
         )
 
+    def _tracked(self, rows: list[dict]) -> list[dict]:
+        plates = self._entry.options.get(CONF_CAR_PLATES) or []
+        return [row for row in rows if row.get("carno") in plates]
+
     @callback
     def _handle_coordinator_update(self) -> None:
-        for row in self.coordinator.data.get("new_exits", []):
-            self._trigger_event(
-                "exit",
-                {
-                    "car_no": row.get("carno"),
-                    "discount_name": row.get("discount_name"),
-                    "entry_date": row.get("entry_date"),
-                    "registered_at": row.get("reg_date"),
-                },
-            )
+        # EventEntity only keeps the *last* _trigger_event call's data until
+        # state is written - call async_write_ha_state() after each one, or
+        # multiple events in the same poll (e.g. entry+exit firing together
+        # for a newly-discovered registration) silently lose all but the
+        # final one.
+        for event_type, key in (("entry", "new_entries"), ("exit", "new_exits")):
+            for row in self._tracked(self.coordinator.data.get(key, [])):
+                self._trigger_event(
+                    event_type,
+                    {
+                        "car_no": row.get("carno"),
+                        "discount_name": row.get("discount_name"),
+                        "entry_date": row.get("entry_date"),
+                        "registered_at": row.get("reg_date"),
+                    },
+                )
+                self.async_write_ha_state()
         super()._handle_coordinator_update()
