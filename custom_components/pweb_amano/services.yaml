@@ -5,6 +5,8 @@ register_discount:
       selector:
         device:
           integration: pweb_amano
+          entity:
+            domain: sensor
     car_no:
       required: true
       example: "12가3456"
