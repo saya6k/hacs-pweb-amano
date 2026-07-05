@@ -31,3 +31,23 @@ register_discount:
       required: false
       selector:
         date:
+
+list_unregistered_vehicles:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: pweb_amano
+          entity:
+            domain: sensor
+    days:
+      required: false
+      example: 2
+      selector:
+        number:
+          min: 1
+          max: 7
+          mode: box
+  response:
+    optional: false

@@ -97,6 +97,20 @@
           "description": "Date the vehicle entered. If left blank, both yesterday and today are searched."
         }
       }
+    },
+    "list_unregistered_vehicles": {
+      "name": "List unregistered vehicles",
+      "description": "Lists currently-parked vehicles with no discount registered yet.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The parking management system (site) to search."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many days back (including today) to search. Higher values take longer."
+        }
+      }
     }
   }
 }
