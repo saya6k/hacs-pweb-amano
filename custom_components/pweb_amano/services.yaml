@@ -49,5 +49,3 @@ list_unregistered_vehicles:
           min: 1
           max: 7
           mode: box
-  response:
-    optional: false
