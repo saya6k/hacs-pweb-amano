@@ -10,7 +10,7 @@ A Home Assistant custom integration for **PWEB** (아마노코리아 관리사�
 
 ## Status
 
-The discount (할인) screens are implemented: balance, registration history, and on-demand actions for whichever vehicle is currently parked. General dashboard data (notices, management fees, etc.) is out of scope for now — that page's layout hasn't been inspected. See `AGENTS.md` for details.
+The discount (할인) screens are implemented: balance, registration history, and on-demand actions for whichever vehicle is currently parked. General dashboard data (notices, management fees, etc.) is out of scope for now — that page's layout hasn't been inspected.
 
 Entities polled every 5 minutes:
 
