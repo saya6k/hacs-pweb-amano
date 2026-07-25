@@ -1,7 +1,7 @@
 {
   "name": "Amano Parking System (아마노 주차관리시스템)",
   "render_readme": true,
-  "homeassistant": "2026.4.0",
+  "homeassistant": "2026.8.0b0",
   "zip_release": true,
   "filename": "pweb_amano.zip"
 }
