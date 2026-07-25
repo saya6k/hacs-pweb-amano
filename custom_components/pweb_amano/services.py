@@ -67,8 +67,7 @@ def _async_resolve_client(hass: HomeAssistant, device_id: str | None) -> PwebAma
     if device is None:
         raise HomeAssistantError(f"unknown device: {device_id}")
 
-    entry_id = next(iter(device.config_entries), None)
-    entry = hass.config_entries.async_get_entry(entry_id) if entry_id else None
+    entry = hass.config_entries.async_get_entry(device.config_entry_id)
     if entry is None or entry.domain != DOMAIN:
         raise HomeAssistantError(f"device {device_id} is not a PWEB Amano device")
 
