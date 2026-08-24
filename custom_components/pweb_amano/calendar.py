@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -41,9 +42,15 @@ async def async_setup_entry(
     # saved from before that fix, and a blank plate would get its own
     # (unnamed) device otherwise.
     plates = [p for p in (entry.options.get(CONF_CAR_PLATES) or []) if p]
+    site_device = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id
+    )
+    assert site_device is not None
     async_add_entities(
         [
-            PwebAmanoParkingHistoryCalendar(entry.runtime_data, entry, plate)
+            PwebAmanoParkingHistoryCalendar(
+                entry.runtime_data, entry, plate, site_device.id
+            )
             for plate in plates
         ]
     )
@@ -93,7 +100,11 @@ class PwebAmanoParkingHistoryCalendar(
     _attr_translation_key = "parking_history"
 
     def __init__(
-        self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry, plate: str
+        self,
+        coordinator: PwebAmanoCoordinator,
+        entry: PwebAmanoConfigEntry,
+        plate: str,
+        site_device_id: str,
     ) -> None:
         super().__init__(coordinator)
         self._plate = plate
@@ -102,7 +113,7 @@ class PwebAmanoParkingHistoryCalendar(
             identifiers={(DOMAIN, f"{entry.entry_id}_{plate}")},
             name=plate,
             manufacturer="Amano Korea",
-            via_device=(DOMAIN, entry.entry_id),
+            via_device_id=site_device_id,
         )
 
     @property
