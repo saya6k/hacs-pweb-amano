@@ -60,8 +60,12 @@ class PwebAmanoDiscountBalanceSensor(CoordinatorEntity[PwebAmanoCoordinator], Se
 
     _attr_has_entity_name = True
     _attr_translation_key = "discount_balance"
-    _attr_native_unit_of_measurement = "원"
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    # MONETARY forces both of the lines below: the unit has to be an ISO 4217
+    # code (not "원"), and DEVICE_CLASS_STATE_CLASSES maps MONETARY to TOTAL
+    # only - MEASUREMENT is rejected for it.
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_native_unit_of_measurement = "KRW"
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator: PwebAmanoCoordinator, entry: PwebAmanoConfigEntry) -> None:
         super().__init__(coordinator)
